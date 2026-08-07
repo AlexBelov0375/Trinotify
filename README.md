@@ -12,7 +12,9 @@
 [![Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-orange.svg)](https://developer.android.com/jetpack/compose)
 [![Offline](https://img.shields.io/badge/сеть-не%20используется-lightgrey.svg)](#приватность)
 
-Русский · [English](README.en.md)
+Русский · [English](README.en.md) · [Видео](https://www.youtube.com/watch?v=OvZLLjeInBo)
+
+Поддержать проект можно тут: https://boosty.to/triangle_black/
 
 </div>
 
