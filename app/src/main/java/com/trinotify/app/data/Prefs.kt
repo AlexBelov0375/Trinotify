@@ -68,6 +68,11 @@ class Prefs(context: Context) {
         get() = sp.getInt("appAlertTimeoutMinutes", 0)
         set(v) = sp.edit().putInt("appAlertTimeoutMinutes", v).apply()
 
+    /** Что делать с повторами в окне таймаута: SILENCE | BLOCK. */
+    var appAlertTimeoutAction: String
+        get() = sp.getString("appAlertTimeoutAction", Action.SILENCE)!!
+        set(v) = sp.edit().putString("appAlertTimeoutAction", v).apply()
+
     /** Звук уведомления (uri); пусто = системный по умолчанию. */
     var notifSoundUri: String
         get() = sp.getString("notifSoundUri", "")!!

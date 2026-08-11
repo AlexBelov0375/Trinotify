@@ -364,6 +364,14 @@ object Sounder {
     // Время последней озвучки по packageName (uptime); сбрасывается при рестарте процесса.
     private val lastAlertByPkg = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
+    /** true, если пакет ещё в окне таймаута после предыдущей озвучки. */
+    fun isAppInTimeout(pkg: String, timeoutMinutes: Int): Boolean {
+        if (testBypass || timeoutMinutes <= 0 || pkg.isBlank()) return false
+        val last = lastAlertByPkg[pkg] ?: return false
+        val now = android.os.SystemClock.uptimeMillis()
+        return now - last < timeoutMinutes * 60_000L
+    }
+
     /**
      * true, если можно озвучить: не чаще ALERT_COOLDOWN_MS глобально и не чаще
      * appAlertTimeoutMinutes от того же пакета (если таймаут включён).

@@ -278,7 +278,19 @@ class NotifierListener : NotificationListenerService() {
             try {
                 val decision =
                     if (protected) Decision(Action.ALLOW, "Звонок/система — не блокируется")
-                    else engine.decide(pkg, title, text)
+                    else {
+                        val base = engine.decide(pkg, title, text)
+                        val timeoutMin = prefs.appAlertTimeoutMinutes
+                        if (base.action == Action.ALLOW && timeoutMin > 0 &&
+                            Sounder.isAppInTimeout(pkg, timeoutMin)
+                        ) {
+                            val act = prefs.appAlertTimeoutAction
+                            Decision(
+                                if (act == Action.BLOCK) Action.BLOCK else Action.SILENCE,
+                                "Таймаут приложения",
+                            )
+                        } else base
+                    }
 
                 if (decision.action == Action.BLOCK) {
                     try {

@@ -223,6 +223,7 @@ private fun GeneralSection() {
     var defaultAction by remember { mutableStateOf(prefs.defaultAction) }
     var quickMode by remember { mutableStateOf(prefs.quickMode) }
     var appAlertTimeout by remember { mutableIntStateOf(prefs.appAlertTimeoutMinutes) }
+    var appAlertTimeoutAction by remember { mutableStateOf(prefs.appAlertTimeoutAction) }
 
     SwitchRow("Режим тишины", dndMode) {
         dndMode = it; prefs.dndMode = it; Dnd.apply(context)
@@ -258,10 +259,17 @@ private fun GeneralSection() {
                 }, label = { Text("$m мин") })
             }
         }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf(Action.SILENCE, Action.BLOCK).forEach { a ->
+                FilterChip(selected = appAlertTimeoutAction == a, onClick = {
+                    appAlertTimeoutAction = a; prefs.appAlertTimeoutAction = a
+                }, label = { Text(actionName(a)) })
+            }
+        }
     }
     Hint(
         "Если от приложения приходит пачка уведомлений, звучит только первое. " +
-                "Следующее оповещение от него — не раньше чем через выбранный интервал."
+                "Дальше на выбранный интервал — тихо (видно без звука) или блокировать (скрыть)."
     )
 
     SubTitle("Быстрый режим")
