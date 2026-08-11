@@ -361,26 +361,39 @@ object Sounder {
     private const val ALERT_COOLDOWN_MS = 1200L
     @Volatile private var lastAlertAt = 0L
     @Volatile private var testBypass = false
+    // Время последней озвучки по packageName (uptime); сбрасывается при рестарте процесса.
+    private val lastAlertByPkg = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
     /**
-     * true не чаще одного раза за окно ALERT_COOLDOWN_MS. Несколько уведомлений,
-     * пришедших почти одновременно, озвучиваются одним общим звуком, а не какофонией.
+     * true, если можно озвучить: не чаще ALERT_COOLDOWN_MS глобально и не чаще
+     * appAlertTimeoutMinutes от того же пакета (если таймаут включён).
      */
     @Synchronized
-    private fun shouldAlertNow(): Boolean {
+    private fun shouldAlertNow(pkg: String, timeoutMinutes: Int): Boolean {
         if (testBypass) return true
         val now = android.os.SystemClock.uptimeMillis()
+        if (timeoutMinutes > 0 && pkg.isNotBlank()) {
+            val lastPkg = lastAlertByPkg[pkg] ?: 0L
+            if (now - lastPkg < timeoutMinutes * 60_000L) return false
+        }
         if (now - lastAlertAt < ALERT_COOLDOWN_MS) return false
         lastAlertAt = now
+        if (timeoutMinutes > 0 && pkg.isNotBlank()) lastAlertByPkg[pkg] = now
         return true
     }
 
-    fun notifyAllowed(context: Context, appLabel: String, title: String, text: String) {
+    fun notifyAllowed(
+        context: Context,
+        pkg: String,
+        appLabel: String,
+        title: String,
+        text: String,
+    ) {
         val prefs = Prefs.get(context)
         val quick = Modes.effective(prefs)
         if (quick == Modes.SILENT) return
         if (ringing) return // звонок важнее — не перебиваем
-        val fresh = shouldAlertNow()
+        val fresh = shouldAlertNow(pkg, prefs.appAlertTimeoutMinutes)
         if (quick == Modes.NORMAL && prefs.soundMode == "MIRROR") {
             // Зеркало показываем всегда, но озвучиваем только первое в окне.
             postMirror(context, appLabel, title, text, silent = !fresh)
@@ -415,7 +428,10 @@ object Sounder {
     fun testFullNotification(context: Context) {
         testBypass = true
         try {
-            notifyAllowed(context, "Trinotify", "Тест", "Так звучит разрешённое уведомление")
+            notifyAllowed(
+                context, context.packageName, "Trinotify", "Тест",
+                "Так звучит разрешённое уведомление",
+            )
         } finally {
             testBypass = false
         }

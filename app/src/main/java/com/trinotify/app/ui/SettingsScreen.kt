@@ -221,6 +221,7 @@ private fun GeneralSection() {
     var dndMode by remember { mutableStateOf(prefs.dndMode) }
     var defaultAction by remember { mutableStateOf(prefs.defaultAction) }
     var quickMode by remember { mutableStateOf(prefs.quickMode) }
+    var appAlertTimeout by remember { mutableIntStateOf(prefs.appAlertTimeoutMinutes) }
 
     SwitchRow("Режим тишины", dndMode) {
         dndMode = it; prefs.dndMode = it; Dnd.apply(context)
@@ -239,6 +240,28 @@ private fun GeneralSection() {
             }, label = { Text(actionName(a)) })
         }
     }
+
+    SubTitle("Таймаут от приложения")
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("Не повторять звук от одного приложения", modifier = Modifier.weight(1f))
+        Switch(checked = appAlertTimeout > 0, onCheckedChange = {
+            appAlertTimeout = if (it) 5 else 0
+            prefs.appAlertTimeoutMinutes = appAlertTimeout
+        })
+    }
+    if (appAlertTimeout > 0) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf(1, 2, 5, 10, 15, 30).forEach { m ->
+                FilterChip(selected = appAlertTimeout == m, onClick = {
+                    appAlertTimeout = m; prefs.appAlertTimeoutMinutes = m
+                }, label = { Text("$m мин") })
+            }
+        }
+    }
+    Hint(
+        "Если от приложения приходит пачка уведомлений, звучит только первое. " +
+                "Следующее оповещение от него — не раньше чем через выбранный интервал."
+    )
 
     SubTitle("Быстрый режим")
     Hint("Дублируется кнопками в постоянном уведомлении в шторке.")

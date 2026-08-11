@@ -60,6 +60,14 @@ class Prefs(context: Context) {
         get() = sp.getString("notifAlertMode", "BOTH")!!
         set(v) = sp.edit().putString("notifAlertMode", v).apply()
 
+    /**
+     * Таймаут озвучки от одного приложения, минуты.
+     * После первого звука от пакета следующие N минут от него не озвучиваются; 0 — выкл.
+     */
+    var appAlertTimeoutMinutes: Int
+        get() = sp.getInt("appAlertTimeoutMinutes", 0)
+        set(v) = sp.edit().putInt("appAlertTimeoutMinutes", v).apply()
+
     /** Звук уведомления (uri); пусто = системный по умолчанию. */
     var notifSoundUri: String
         get() = sp.getString("notifSoundUri", "")!!

@@ -316,7 +316,9 @@ class NotifierListener : NotificationListenerService() {
                     if (decision.action == Action.ALLOW && !protected &&
                         prefs.dndMode && Dnd.isActive(this@NotifierListener)
                     ) {
-                        Sounder.notifyAllowed(this@NotifierListener, appLabel(pkg), title, text)
+                        Sounder.notifyAllowed(
+                            this@NotifierListener, pkg, appLabel(pkg), title, text,
+                        )
                     }
                 }
             } catch (_: Exception) {
