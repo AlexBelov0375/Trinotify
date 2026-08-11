@@ -214,6 +214,7 @@ private fun SettingsRoot(modifier: Modifier, onOpen: (Section) -> Unit) {
 
 // ---------- Основное ----------
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun GeneralSection() {
     val context = LocalContext.current
@@ -250,7 +251,7 @@ private fun GeneralSection() {
         })
     }
     if (appAlertTimeout > 0) {
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf(1, 2, 5, 10, 15, 30).forEach { m ->
                 FilterChip(selected = appAlertTimeout == m, onClick = {
                     appAlertTimeout = m; prefs.appAlertTimeoutMinutes = m
