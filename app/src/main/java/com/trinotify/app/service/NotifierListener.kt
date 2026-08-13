@@ -276,21 +276,32 @@ class NotifierListener : NotificationListenerService() {
             // Вся работа обёрнута: при зашифрованной БД до первой разблокировки Keystore
             // закрыт и Room бросает — без catch падал бы весь процесс слушателя в петле.
             try {
-                val decision =
+                val base =
                     if (protected) Decision(Action.ALLOW, "Звонок/система — не блокируется")
-                    else {
-                        val base = engine.decide(pkg, title, text)
-                        val timeoutMin = prefs.appAlertTimeoutMinutes
-                        if (base.action == Action.ALLOW && timeoutMin > 0 &&
-                            Sounder.isAppInTimeout(pkg, timeoutMin)
-                        ) {
-                            val act = prefs.appAlertTimeoutAction
-                            Decision(
-                                if (act == Action.BLOCK) Action.BLOCK else Action.SILENCE,
-                                "Таймаут приложения",
-                            )
-                        } else base
+                    else engine.decide(pkg, title, text)
+
+                // Архив/звук: пропускаем повторные апдейты того же содержимого, тихие
+                // обновления (only-alert-once) и пустые сводки групп.
+                val content = "$pkg|$title|$text"
+                val prev = lastContent.put(key, content)
+                val isDuplicate = prev == content
+                val silentUpdate = onlyAlertOnce && prev != null
+                val skipArchive = isDuplicate || silentUpdate ||
+                    (isSummary && title.isBlank() && text.isBlank())
+
+                // Таймаут только на новое событие: иначе «Блокировать» сносит
+                // апдейт того уведомления, которое только что разрешили.
+                var decision = base
+                if (!protected && !skipArchive && base.action == Action.ALLOW) {
+                    val timeoutMin = prefs.appAlertTimeoutMinutes
+                    if (timeoutMin > 0 && Sounder.isAppInTimeout(pkg, timeoutMin)) {
+                        val act = prefs.appAlertTimeoutAction
+                        decision = Decision(
+                            if (act == Action.BLOCK) Action.BLOCK else Action.SILENCE,
+                            "Таймаут приложения",
+                        )
                     }
+                }
 
                 if (decision.action == Action.BLOCK) {
                     try {
@@ -303,13 +314,7 @@ class NotifierListener : NotificationListenerService() {
                     }
                 }
 
-                // Архив: пропускаем повторные апдейты того же содержимого, тихие
-                // обновления (only-alert-once) и пустые сводки групп.
-                val content = "$pkg|$title|$text"
-                val prev = lastContent.put(key, content)
-                val isDuplicate = prev == content
-                val silentUpdate = onlyAlertOnce && prev != null
-                if (!isDuplicate && !silentUpdate && !(isSummary && title.isBlank() && text.isBlank())) {
+                if (!skipArchive) {
                     try {
                         Db.get(this@NotifierListener).notifDao().insert(
                             NotifRecord(

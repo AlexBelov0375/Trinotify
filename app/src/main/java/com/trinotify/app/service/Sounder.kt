@@ -12,12 +12,14 @@ import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
-import com.trinotify.app.logic.Modes
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import com.trinotify.app.data.Prefs
+import com.trinotify.app.logic.AlertGate
+import com.trinotify.app.logic.Modes
 import com.trinotify.app.ui.MainActivity
 
 /**
@@ -357,37 +359,18 @@ object Sounder {
         return playing
     }
 
-    // Окно объединения звуков: пачка уведомлений подряд должна дать один звук.
-    private const val ALERT_COOLDOWN_MS = 1200L
-    @Volatile private var lastAlertAt = 0L
     @Volatile private var testBypass = false
-    // Время последней озвучки по packageName (uptime); сбрасывается при рестарте процесса.
-    private val lastAlertByPkg = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private val alertGate = AlertGate()
 
     /** true, если пакет ещё в окне таймаута после предыдущей озвучки. */
     fun isAppInTimeout(pkg: String, timeoutMinutes: Int): Boolean {
-        if (testBypass || timeoutMinutes <= 0 || pkg.isBlank()) return false
-        val last = lastAlertByPkg[pkg] ?: return false
-        val now = android.os.SystemClock.uptimeMillis()
-        return now - last < timeoutMinutes * 60_000L
+        if (testBypass) return false
+        return alertGate.inAppTimeout(pkg, timeoutMinutes, SystemClock.elapsedRealtime())
     }
 
-    /**
-     * true, если можно озвучить: не чаще ALERT_COOLDOWN_MS глобально и не чаще
-     * appAlertTimeoutMinutes от того же пакета (если таймаут включён).
-     */
-    @Synchronized
     private fun shouldAlertNow(pkg: String, timeoutMinutes: Int): Boolean {
         if (testBypass) return true
-        val now = android.os.SystemClock.uptimeMillis()
-        if (timeoutMinutes > 0 && pkg.isNotBlank()) {
-            val lastPkg = lastAlertByPkg[pkg] ?: 0L
-            if (now - lastPkg < timeoutMinutes * 60_000L) return false
-        }
-        if (now - lastAlertAt < ALERT_COOLDOWN_MS) return false
-        lastAlertAt = now
-        if (timeoutMinutes > 0 && pkg.isNotBlank()) lastAlertByPkg[pkg] = now
-        return true
+        return alertGate.shouldAlert(pkg, timeoutMinutes, SystemClock.elapsedRealtime())
     }
 
     fun notifyAllowed(
